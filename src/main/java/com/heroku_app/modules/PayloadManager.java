@@ -28,8 +28,22 @@ public class PayloadManager {
 
         return booking;
     }
+    public Booking createPayloadBookingWithoutFirstname() {
+        Booking booking = new Booking();
+        booking.setLastname("Henry");
+        booking.setTotalprice(112);
+        booking.setDepositpaid(true);
 
-    public Booking createPayloadBookingFakerJS() {
+        Bookingdates bookingdates = new Bookingdates();
+        bookingdates.setCheckin("2025-02-01");
+        bookingdates.setCheckout("2025-02-10");
+        booking.setBookingdates(bookingdates);
+        booking.setAdditionalneeds("Breakfast");
+
+        return booking;
+    }
+
+        public Booking createPayloadBookingFakerJS() {
         Booking booking = new Booking();
         booking.setFirstname(faker.name().firstName());
         booking.setLastname(faker.name().lastName());
