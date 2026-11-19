@@ -1,10 +1,11 @@
-package com.heroku_app.pojos.reponse;
+package com.heroku_app.pojos.response;
 
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 import com.heroku_app.pojos.request.Booking;
 
 public class BookingResponse {
+    // This class represents the response received after send Post request for creating a booking. It contains the booking ID and the booking details.
     @SerializedName("bookingid")
     @Expose
     private Integer bookingid;

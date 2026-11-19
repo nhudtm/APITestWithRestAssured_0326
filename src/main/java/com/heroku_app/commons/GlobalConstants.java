@@ -5,4 +5,5 @@ public class GlobalConstants {
     public static final String RESOURCES_PATH = PROJECT_PATH + "/src/test/resources";
     public static final String ALLURE_RESULTS_PATH = PROJECT_PATH + "/allure-results";
     public static final String FILE_SEPARATOR = System.getProperty("file.separator");
+    public static final String PROPERTIES_FILE_PATH = RESOURCES_PATH + FILE_SEPARATOR + "config.properties";
 }

@@ -1,16 +1,16 @@
 package com.heroku_app.base;
 
+import com.heroku_app.apis.AuthAPI;
+import com.heroku_app.apis.BookingAPI;
 import com.heroku_app.asserts.AssertActions;
+import com.heroku_app.client.RestClient;
 import com.heroku_app.commons.GlobalConstants;
+import com.heroku_app.config.PropertiesConfig;
 
 import io.restassured.RestAssured;
-import io.restassured.builder.RequestSpecBuilder;
-import io.restassured.http.ContentType;
 import io.restassured.path.json.JsonPath;
 import io.restassured.response.Response;
-import io.restassured.response.ValidatableResponse;
 import io.restassured.specification.RequestSpecification;
-
 
 import org.testng.annotations.AfterClass;
 import org.testng.annotations.AfterMethod;
@@ -18,21 +18,23 @@ import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.BeforeSuite;
 
 import java.io.File;
-import com.google.gson.Gson;
 import com.heroku_app.endpoints.APIConstants;
-import com.heroku_app.modules.PayloadManager;
+import com.heroku_app.factories.PayloadFactory;
+import com.heroku_app.spec.RequestSpecFactory;
 
 public class BaseTest {
-    public RequestSpecification requestSpecification;
+
     public AssertActions assertActions;
-    public PayloadManager payloadManager;
-    public JsonPath jsonPath;
-    public Response response;
-    public ValidatableResponse validatableResponse;
+    public PayloadFactory payloadFactory;
+    public RestClient restClient;
+    public BookingAPI bookingAPI;
+    public AuthAPI authAPI;
+  
+
 
     @BeforeSuite
     public void deleteFileInReport() {
-           // Remove all file in Allure attachment (json file)
+        // Remove all file in Allure attachment (json file)
         deleteAllFileInFolder("allure-results");
     }
 
@@ -55,42 +57,17 @@ public class BaseTest {
 
     @BeforeMethod
     public void setUp() {
-        payloadManager = new PayloadManager();
+        RequestSpecification requestSpec = RequestSpecFactory.createDefaultSpec();
+        restClient = new RestClient(requestSpec);
         assertActions = new AssertActions();
+        payloadFactory = new PayloadFactory();
+        bookingAPI = new BookingAPI(restClient);
+        authAPI = new AuthAPI(restClient, payloadFactory);
 
-        requestSpecification = new RequestSpecBuilder()
-                .setBaseUri(APIConstants.BASE_URL)
-                .addHeader("Content-Type", "application/json")
-                .build()
-                .log()
-                .all();
     }
 
     public String getToken() {
-        // Set up the request specification for authentication
-        requestSpecification = RestAssured.given();
-        requestSpecification.baseUri(APIConstants.BASE_URL)
-                .basePath(APIConstants.AUTH_URL);
-
-        // Create the authentication payload and send the POST request to get the token
-        String payload = payloadManager.setAuthPayload();
-        response = requestSpecification.contentType(ContentType.JSON)
-                .body(payload)
-                .when()
-                .post();
-
-        // Extract and return the token from the response
-        return payloadManager.getTokenFromJSON(response.asString());
-    }
-
-    public String buildBody(Object payload) {
-        if (payload == null) {
-            throw new IllegalArgumentException("Payload object cannot be null");
-        }
-        if (payload instanceof String) {
-            return (String) payload;
-        }
-        return new Gson().toJson(payload);
+        return authAPI.getToken(PropertiesConfig.getRequiredProperty("username"), PropertiesConfig.getRequiredProperty("password"));
     }
 
     @AfterMethod

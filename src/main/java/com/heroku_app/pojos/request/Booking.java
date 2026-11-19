@@ -4,6 +4,7 @@ import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 
 public class Booking {
+    // This class represents the booking details retrieved from the server by GET request. It contains the booking information such as first name, last name, total price, deposit paid status, booking dates, and additional needs.
     @SerializedName("firstname")
     @Expose
     private String firstname;
