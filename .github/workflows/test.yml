@@ -8,12 +8,21 @@ on:
 
 permissions:
   contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: false
 
 jobs:
   test:
     name: Run REST Assured tests
     runs-on: ubuntu-latest
     timeout-minutes: 30
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
 
     env:
       BASE_URL: ${{ secrets.RESTFUL_BOOKER_BASE_URL }}
@@ -34,6 +43,10 @@ jobs:
       - name: Run default CRUD suite
         run: mvn --batch-mode --no-transfer-progress clean test
 
+      - name: Generate Allure HTML report
+        if: always()
+        run: mvn --batch-mode --no-transfer-progress allure:report
+
       - name: Upload Surefire reports
         if: always()
         uses: actions/upload-artifact@v4
@@ -51,3 +64,23 @@ jobs:
           path: target/allure-results
           if-no-files-found: ignore
           retention-days: 14
+
+      - name: Upload Allure HTML report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: allure-html-report
+          path: target/site/allure-maven-plugin
+          if-no-files-found: ignore
+          retention-days: 14
+
+      - name: Upload Allure report for GitHub Pages
+        if: always()
+        uses: actions/upload-pages-artifact@v3
+        with:
+          path: target/site/allure-maven-plugin
+
+      - name: Deploy Allure report to GitHub Pages
+        if: always()
+        id: deployment
+        uses: actions/deploy-pages@v4
