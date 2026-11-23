@@ -25,9 +25,9 @@ jobs:
       url: ${{ steps.deployment.outputs.page_url }}
 
     env:
-      BASE_URL: ${{ secrets.RESTFUL_BOOKER_BASE_URL }}
-      USERNAME: ${{ secrets.RESTFUL_BOOKER_USERNAME }}
-      PASSWORD: ${{ secrets.RESTFUL_BOOKER_PASSWORD }}
+      BASE_URL: ${{ secrets.base_url || secrets.RESTFUL_BOOKER_BASE_URL || 'https://restful-booker.herokuapp.com' }}
+      USERNAME: ${{ secrets.username || secrets.RESTFUL_BOOKER_USERNAME || 'admin' }}
+      PASSWORD: ${{ secrets.password || secrets.RESTFUL_BOOKER_PASSWORD || 'password123' }}
 
     steps:
       - name: Checkout repository
@@ -39,6 +39,14 @@ jobs:
           distribution: temurin
           java-version: '17'
           cache: maven
+
+      - name: Create test configuration
+        shell: bash
+        run: |
+          mkdir -p src/test/resources
+          printf 'base.url=%s\nusername=%s\npassword=%s\n' \
+            "$BASE_URL" "$USERNAME" "$PASSWORD" \
+            > src/test/resources/config.properties
 
       - name: Run default CRUD suite
         run: mvn --batch-mode --no-transfer-progress clean test
