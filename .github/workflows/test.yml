@@ -43,9 +43,29 @@ jobs:
       - name: Run default CRUD suite
         run: mvn --batch-mode --no-transfer-progress clean test
 
+      - name: Verify Allure result data
+        if: always()
+        shell: bash
+        run: |
+          count=$(find target/allure-results -type f -name '*-result.json' 2>/dev/null | wc -l | tr -d ' ')
+          echo "Allure result count: $count"
+          echo "Allure result count: $count" >> "$GITHUB_STEP_SUMMARY"
+          if [ "$count" -eq 0 ]; then
+            echo "No Allure *-result.json files were generated." >&2
+            exit 1
+          fi
+
       - name: Generate Allure HTML report
         if: always()
         run: mvn --batch-mode --no-transfer-progress allure:report
+
+      - name: Verify Allure report
+        if: always()
+        shell: bash
+        run: |
+          test -f target/site/allure-maven-plugin/index.html
+          test -f target/site/allure-maven-plugin/widgets/summary.json
+          cat target/site/allure-maven-plugin/widgets/summary.json
 
       - name: Upload Surefire reports
         if: always()
