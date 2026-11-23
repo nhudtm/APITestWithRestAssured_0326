@@ -2,15 +2,11 @@ package com.heroku_app.tests.crud;
 
 import static io.restassured.module.jsv.JsonSchemaValidator.matchesJsonSchemaInClasspath;
 
-import java.util.HashMap;
-import java.util.LinkedHashMap;
 import java.util.Map;
 
 import org.joda.time.LocalDate;
-import org.testng.Assert;
 import org.testng.annotations.Test;
 
-import com.beust.ah.A;
 import com.heroku_app.base.BaseTest;
 import com.heroku_app.dataproviders.BookingDataProviders;
 import com.heroku_app.pojos.request.Booking;

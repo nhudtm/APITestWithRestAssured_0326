@@ -113,12 +113,30 @@ Các group là: `smoke`, `happy_path`, `required_fields`, `boundary_values`, `fi
 
 | Bước | Testcase | Dependency | Mô tả |
 |---:|---|---|---|
-| 1 | `testCreateBooking` | - | Tạo booking và lưu booking ID trong `ITestContext` |
+| 1 | `testCreateBooking` | - | Tạo booking bằng payload Faker và lưu booking ID cùng payload trong field của test class |
 | 2 | `testVerifyBookingId` | `testCreateBooking` | Truy xuất booking vừa tạo |
-| 3 | `testUpdateBookingByID` | `testVerifyBookingId` | Tạo token và cập nhật booking |
-| 4 | `testDeleteBookingById` | `testUpdateBookingByID` | Xóa booking và xác minh GET trả 404 |
+| 3 | `testUpdateBookingByID` | `testVerifyBookingId` | Gọi `getAuthToken()`, cập nhật booking bằng payload mới và xác minh dữ liệu |
+| 4 | `testDeleteBookingById` | `testUpdateBookingByID` | Xóa booking bằng token và xác minh GET trả 404 |
 
-Các bước E2E dùng `dependsOnMethods` để giữ thứ tự phụ thuộc và được chạy bằng `testng_e2e.xml`.
+Các bước E2E dùng `dependsOnMethods` để giữ thứ tự phụ thuộc. Booking ID và payload được lưu trong field của `TestIntegrationFlow1`; auth token được quản lý qua field `token` của `BaseTest`. Test cleanup `@AfterClass(alwaysRun = true)` sẽ xóa booking nếu booking chưa được xóa trước đó.
+
+### Kết quả xác nhận
+
+Sau khi sửa luồng auth và dữ liệu E2E, suite đã được chạy bằng:
+
+```bash
+mvn clean test -Dtest=TestIntegrationFlow1 -DsuiteXmlFile=src/test/resources/testng_e2e.xml
+```
+
+Kết quả:
+
+```text
+Tests run: 4
+Failures: 0
+Errors: 0
+Skipped: 0
+BUILD SUCCESS
+```
 
 ## 5) Cấu hình và chạy test
 

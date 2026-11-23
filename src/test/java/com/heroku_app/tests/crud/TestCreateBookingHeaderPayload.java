@@ -1,5 +1,6 @@
 package com.heroku_app.tests.crud;
 
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import com.heroku_app.base.BaseTest;
@@ -12,6 +13,12 @@ import io.restassured.RestAssured;
 import io.restassured.response.Response;
 
 public class TestCreateBookingHeaderPayload extends BaseTest {
+
+    @BeforeMethod 
+    public void setUpAuth() {
+        // Ensure that the token is retrieved before each test
+        getAuthToken();
+    }
 
     @Test(groups = "header_content_type", priority = 1)
     @Description("TC-HEADER-001 - Create booking with standard application/json Content-Type")

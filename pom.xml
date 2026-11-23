@@ -95,7 +95,7 @@
                 <activeByDefault>true</activeByDefault>
             </activation>
             <properties>
-                <xml>testng</xml>
+                <xml>test</xml>
             </properties>
         </profile>
     </profiles>
