@@ -1,9 +1,14 @@
 name: API Test Suite
 
+env:
+  FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: "true"
+
 on:
   push:
     branches:
       - main
+      - master
+  pull_request:
   workflow_dispatch:
 
 permissions:
@@ -19,51 +24,52 @@ jobs:
   test:
     name: Run REST Assured tests
     runs-on: ubuntu-latest
-    timeout-minutes: 30
-    environment:
-      name: github-pages
-      url: ${{ steps.deployment.outputs.page_url }}
-
-    env:
-      BASE_URL: ${{ secrets.base_url || secrets.RESTFUL_BOOKER_BASE_URL || 'https://restful-booker.herokuapp.com' }}
-      USERNAME: ${{ secrets.username || secrets.RESTFUL_BOOKER_USERNAME || 'admin' }}
-      PASSWORD: ${{ secrets.password || secrets.RESTFUL_BOOKER_PASSWORD || 'password123' }}
+    timeout-minutes: 60
 
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
+      - name: Checkout
+        uses: actions/checkout@v5
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v5
         with:
           distribution: temurin
           java-version: '17'
           cache: maven
 
-      - name: Create test configuration
+      - name: Build config.properties from GitHub Secrets
+        env:
+          BASE_URL: ${{ secrets.base_url }}
+          USERNAME: ${{ secrets.username }}
+          PASSWORD: ${{ secrets.password }}
         shell: bash
         run: |
           mkdir -p src/test/resources
-          printf 'base.url=%s\nusername=%s\npassword=%s\n' \
-            "$BASE_URL" "$USERNAME" "$PASSWORD" \
-            > src/test/resources/config.properties
+          cat > src/test/resources/config.properties <<EOF
+          base.url=$BASE_URL
+          username=$USERNAME
+          password=$PASSWORD
+          EOF
 
-      - name: Run default CRUD suite
-        run: mvn --batch-mode --no-transfer-progress clean test
-
-      - name: Verify Allure result data
-        if: always()
+      - name: Validate required secrets
+        env:
+          BASE_URL: ${{ secrets.base_url }}
+          USERNAME: ${{ secrets.username }}
+          PASSWORD: ${{ secrets.password }}
         shell: bash
         run: |
-          count=$(find target/allure-results -type f -name '*-result.json' 2>/dev/null | wc -l | tr -d ' ')
-          echo "Allure result count: $count"
-          echo "Allure result count: $count" >> "$GITHUB_STEP_SUMMARY"
-          if [ "$count" -eq 0 ]; then
-            echo "No Allure *-result.json files were generated." >&2
-            exit 1
-          fi
+          test -n "$BASE_URL" || (echo "Missing base_url secret" && exit 1)
+          test -n "$USERNAME" || (echo "Missing username secret" && exit 1)
+          test -n "$PASSWORD" || (echo "Missing password secret" && exit 1)
 
-      - name: Generate Allure HTML report
+      - name: Run default CRUD suite
+        env:
+          BASE_URL: ${{ secrets.base_url }}
+          USERNAME: ${{ secrets.username }}
+          PASSWORD: ${{ secrets.password }}
+        run: mvn --batch-mode --no-transfer-progress clean test
+
+      - name: Generate Allure report
         if: always()
         run: mvn --batch-mode --no-transfer-progress allure:report
 
@@ -75,9 +81,9 @@ jobs:
           test -f target/site/allure-maven-plugin/widgets/summary.json
           cat target/site/allure-maven-plugin/widgets/summary.json
 
-      - name: Upload Surefire reports
+      - name: Upload surefire reports
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: surefire-reports
           path: target/surefire-reports
@@ -86,31 +92,38 @@ jobs:
 
       - name: Upload Allure results
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: allure-results
           path: target/allure-results
           if-no-files-found: ignore
           retention-days: 14
 
-      - name: Upload Allure HTML report
+      - name: Upload Allure report
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v5
         with:
           name: allure-html-report
           path: target/site/allure-maven-plugin
           if-no-files-found: ignore
           retention-days: 14
 
-      - name: Upload Allure report for GitHub Pages
+      - name: Upload Allure Pages artifact
         if: always()
         uses: actions/upload-pages-artifact@v3
         with:
           name: github-pages-${{ github.run_attempt }}
           path: target/site/allure-maven-plugin
 
+  deploy-allure-pages:
+    needs: test
+    if: always() && github.event_name == 'push' && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/master')
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
       - name: Deploy Allure report to GitHub Pages
-        if: always()
         id: deployment
         uses: actions/deploy-pages@v4
         with:
