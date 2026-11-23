@@ -1,90 +1,84 @@
 package com.heroku_app.tests.e2e_integration;
 
-import com.google.gson.Gson;
+import org.testng.annotations.AfterClass;
+import org.testng.annotations.Test;
+
 import com.heroku_app.base.BaseTest;
-import com.heroku_app.endpoints.APIConstants;
-import com.heroku_app.pojos.reponse.BookingResponse;
 import com.heroku_app.pojos.request.Booking;
+import com.heroku_app.pojos.response.BookingResponse;
 
 import io.qameta.allure.Description;
 import io.qameta.allure.Owner;
-import io.restassured.RestAssured;
-import org.testng.ITestContext;
-import org.testng.annotations.Test;
+import io.restassured.response.Response;
 
 public class TestIntegrationFlow1 extends BaseTest {
+    private Integer bookingId;
+    private Booking bookingPayload;
 
-    @Test(priority = 1)
+    @Test
     @Owner("Nhu")
     @Description("E2E Step 1 - Create booking")
-    public void testCreateBooking(ITestContext iTestContext) {
-        requestSpecification.basePath(APIConstants.CREATE_UPDATE_BOOKING_URL);
-        response = RestAssured.given(requestSpecification)
-            .when()
-            .body(payloadManager.createPayloadBooking())
-            .post();
+    public void testCreateBooking() {
+         bookingPayload = payloadFactory.createPayloadBookingFakerJS();
+        Response response = bookingAPI.createBooking(bookingPayload);
 
-        validatableResponse = response.then().log().all();
-        validatableResponse.statusCode(200);
-
-        BookingResponse bookingResponse = payloadManager.bookingResponseObject(response.asString());
-        iTestContext.setAttribute("bookingid", bookingResponse.getBookingid());
-        assertActions.verifyStringKeyNotNull(bookingResponse.getBookingid());
+        assertActions.verifyResponseBody(response.getStatusCode(), 200);
+       
+        BookingResponse bookingResponse = response.as(BookingResponse.class);
+        Integer id = bookingResponse.getBookingid();
+        assertActions.verifyTrue(id > 0, "Booking ID should be greater than 0");
+        assertActions.verifyNotNull(id);
+        bookingId = id;
     }
 
-    @Test(priority = 2, dependsOnMethods = "testCreateBooking")
+    @Test(dependsOnMethods = "testCreateBooking")
     @Description("E2E Step 2 - Verify booking exists")
-    public void testVerifyBookingId(ITestContext iTestContext) {
-        Integer bookingid = (Integer) iTestContext.getAttribute("bookingid");
-        String basePathGET = APIConstants.CREATE_UPDATE_BOOKING_URL + "/" + bookingid;
-        requestSpecification.basePath(basePathGET);
+    public void testVerifyBookingId() {
+        Response response = bookingAPI.getBookingById(bookingId);
+        assertActions.verifyResponseBody(response.getStatusCode(), 200);
 
-        response = RestAssured.given(requestSpecification)
-            .when()
-            .get();
-
-        validatableResponse = response.then().log().all();
-        validatableResponse.statusCode(200);
-
-        Booking booking = new Gson().fromJson(response.asString(), Booking.class);
-        assertActions.verifyStringKey(booking.getFirstname(), "John");
+        Booking booking = response.as(Booking.class);
+        assertActions.verifyStringEquals(booking.getFirstname(), bookingPayload.getFirstname());
+        assertActions.verifyStringEquals(booking.getLastname(), bookingPayload.getLastname());
+        assertActions.verifyIntEquals(booking.getTotalprice(), bookingPayload.getTotalprice());
+        assertActions.verifyStringEquals(booking.getBookingdates().getCheckin(), bookingPayload.getBookingdates().getCheckin());
+        assertActions.verifyStringEquals(booking.getBookingdates().getCheckout(), bookingPayload.getBookingdates().getCheckout());
     }
 
-    @Test(priority = 3, dependsOnMethods = "testVerifyBookingId")
+    @Test( dependsOnMethods = "testVerifyBookingId")
     @Description("E2E Step 3 - Update booking")
-    public void testUpdateBookingByID(ITestContext iTestContext) {
-        Integer bookingid = (Integer) iTestContext.getAttribute("bookingid");
-        String token = getToken();
-        iTestContext.setAttribute("token", token);
+    public void testUpdateBookingByID() {
+        getAuthToken();
+        Booking updatePayload = payloadFactory.createPayloadBookingFakerJS();
+        Response response = bookingAPI.updateBooking(bookingId, updatePayload, token);
 
-        String basePathPUT = APIConstants.CREATE_UPDATE_BOOKING_URL + "/" + bookingid;
-        requestSpecification.basePath(basePathPUT);
+        assertActions.verifyResponseBody(response.getStatusCode(), 200);
 
-        response = RestAssured.given(requestSpecification)
-            .cookie("token", token)
-            .when()
-            .body(payloadManager.fullUpdatePayload())
-            .put();
-
-        validatableResponse = response.then().log().all();
-        validatableResponse.statusCode(200);
+        Booking updatedBooking = bookingAPI.getBookingById(bookingId).as(Booking.class);
+        assertActions.verifyStringEquals(updatedBooking.getFirstname(), updatePayload.getFirstname());
+        assertActions.verifyStringEquals(updatedBooking.getLastname(), updatePayload.getLastname());
     }
 
-    @Test(priority = 4, dependsOnMethods = "testUpdateBookingByID")
+    @Test( dependsOnMethods = "testUpdateBookingByID")
     @Description("E2E Step 4 - Delete booking")
-    public void testDeleteBookingById(ITestContext iTestContext) {
-        Integer bookingid = (Integer) iTestContext.getAttribute("bookingid");
-        String token = (String) iTestContext.getAttribute("token");
+    public void testDeleteBookingById() {
+        
+        Response response = bookingAPI.deleteBooking(bookingId, token);
+        assertActions.verifyResponseBody(response.getStatusCode(), 201);
 
-        String basePathDELETE = APIConstants.CREATE_UPDATE_BOOKING_URL + "/" + bookingid;
-        requestSpecification.basePath(basePathDELETE);
+        // Verify the booking is deleted
+        Response getDeletedBookingResponse = bookingAPI.getBookingById(bookingId);
+        assertActions.verifyResponseBody(getDeletedBookingResponse.getStatusCode(), 404);
+    }
 
-        response = RestAssured.given(requestSpecification)
-            .cookie("token", token)
-            .when()
-            .delete();
-
-        validatableResponse = response.then().log().all();
-        validatableResponse.statusCode(201);
+    @AfterClass (alwaysRun = true)
+    public void cleanUpBooking() {
+        // Clean up resources if necessary
+        if (bookingId !=null && token != null) {
+            Response response = bookingAPI.deleteBooking(bookingId, token);
+            if (response.getStatusCode() != 201) {
+                System.out.println("Failed to delete booking with ID: " + bookingId);
+            }
+        }
     }
 }

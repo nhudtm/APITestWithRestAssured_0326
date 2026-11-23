@@ -3,9 +3,10 @@
 <suite name="API Test Suite">
     <test verbose="2" preserve-order="true" name="CRUD Tests">
         <classes>
-            <class name="com.heroku_app.tests.crud.TestHealthCheck"/>
+    
             <class name="com.heroku_app.tests.crud.TestCreateToken"/>
             <class name="com.heroku_app.tests.crud.TestCreateBooking"/>
+            <class name="com.heroku_app.tests.crud.TestCreateBookingHeaderPayload"/>
         </classes>
     </test>
 </suite>

@@ -78,7 +78,7 @@
                 <version>3.1.2</version>
                 <configuration>
                     <suiteXmlFiles>
-                        <suiteXmlFile>${suiteXmlFile}</suiteXmlFile>
+                        <suiteXmlFile>src/test/resources/${xml}.xml</suiteXmlFile>
                     </suiteXmlFiles>
                     <systemPropertyVariables>
                         <allure.results.directory>${project.build.directory}/allure-results</allure.results.directory>
@@ -95,7 +95,7 @@
                 <activeByDefault>true</activeByDefault>
             </activation>
             <properties>
-                <suiteXmlFile>src/test/resources/testng.xml</suiteXmlFile>
+                <xml>test</xml>
             </properties>
         </profile>
     </profiles>

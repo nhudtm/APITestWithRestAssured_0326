@@ -1,4 +1,4 @@
-package com.heroku_app.pojos.reponse;
+package com.heroku_app.pojos.response;
 
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
